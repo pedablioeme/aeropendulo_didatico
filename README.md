@@ -6,7 +6,7 @@
 
 ## Sobre
 
-Este projeto contém o código desenvolvido para um **Arduino Mega 2560** responsável pelo acionamento e gerenciamento de uma bancada de aeropêndulo, também conhecida como pêndulo subamortecido.
+Código implementado num Arduino Mega 2560 destinado ao acionamento em malha aberta ou fechada de uma bancada didática para o ensino de Controle de Processos, classicamente nominada aeropêndulo ou pêndulo subamortecido. Para além disso, o programa compreende o gerenciamento do menu interativo permitidor da interação usuário-planta.
 
 O programa permite operar a planta em:
 
