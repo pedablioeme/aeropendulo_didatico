@@ -44,7 +44,7 @@ Resumo: Devido à alta complexidade e carga teórica restrita ao nível final da
 
 
 <p align="center">
-  <img src="/imagens/aeropendulo.png" alt="Aeropendulo" width="400px">
+  <img src="/imagens/aeropendulo.png" alt="Aeropendulo" width="800px">
 </p>
 
 O pêndulo foi construído em uma estrutura de perfil de alumínio 30x30 com um formato de base retangular composto de hastes verticais, sustentadas por placas, que suportarão um eixo linear [1] de 8mm de diâmetro e de 300mm de comprimento. Neste eixo, será unida uma barra de alumínio que irá ser o pêndulo propriamente dito. Além disso, estará fixado um mancal [2] em cada uma de suas duas extremidades, o qual serve de apoio e o sujeita à ação de rotação. Para aferir o ângulo do aeropêndulo, empregamos um potenciometro multivoltas [3]. O dispositivo integrado ao eixo linear exerce sua função pela alteração de sua resistência à medida que o eixo é rotacionado. A tensão de saída, portanto, é interpretada pelo Arudino e é tranformada em uma variável correspondente à variável de ângulo controlada θ(t).  
