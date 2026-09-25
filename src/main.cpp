@@ -197,7 +197,7 @@ void armazenaGanhos() {
 
 void acionamentoSerial() {
   if (Serial.available() > 0) {
-    u = Serial.parseInt();
+    u = constrain(Serial.parseInt(), 0, 100);
   }
 }
 
