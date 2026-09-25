@@ -1,0 +1,1 @@
+Código implementado num Arduino Mega 2560 destinado ao acionamento em malha aberta ou fechada (PID) de uma bancada didática para o ensino de Controle de Processos, classicamente nominada aeropêndulo ou pêndulo subamortecido. Para além disso, o programa compreende o gerenciamento do menu interativo permitidor da interação usuário-planta.
