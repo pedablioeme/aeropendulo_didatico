@@ -19,7 +19,6 @@ Orientador: Prof. Werther Serralheiro
 #include <Servo.h>
 #include <TimerOne.h>
 #include <Wire.h>
-#include <PID_v1.h>  
 #include <EEPROM.h>
 
 #include "Globals.h"
@@ -131,9 +130,11 @@ void loop() {
       if (mFechada) {
         fechaMalhaPID();
       }
+       /*
       else if (pid.GetMode() == AUTOMATIC) {
         pid.SetMode(MANUAL);              // malha aberta: PID fica parado, u é manual
       }
+     */
       acionaSaida();
       imprime();
       tempo_atual = millis();
@@ -170,13 +171,40 @@ void imprime() {
   Serial.println(y);
 }
 
-void fechaMalhaPID() {
-  // transferência sem tranco: ao ligar a malha, a lib parte do u atual
-  if (pid.GetMode() == MANUAL) {
-    pidOutput = u;
-    pidInput  = y;
-    pid.SetMode(AUTOMATIC);              
+float proporcional(float erro){
+  return Kp * erro;
+}
+
+float integrativo(float erro){  // deve-se aplicar um trava para a integração do controlador
+  termoI += Ki * Ts_s * erro;
+  termoI = constrain(termoI, 0.0, 100.0);   // anti-windup: limita a parcela I à faixa de u
+  return termoI;
+}
+
+float derivativo(){
+  // derivada da medição (não do erro): evita pico quando yr muda
+  float d = -Kd * (y - y_anterior) / Ts_s;
+  y_anterior = y;
+  return d;
+}
+
+void fechaMalhaPID(){
+  float erro = yr - y;
+
+  // primeiro ciclo após fechar a malha: parte do u atual (sem tranco)
+  if (!malhaAtiva) {
+    termoI = u;
+    y_anterior = y;
+    malhaAtiva = true;
   }
+
+  float P = proporcional(erro);
+  float I = integrativo(erro);
+  float D = derivativo();
+
+  float saida = P + I + D;
+  u = (int)round(constrain(saida, 0.0, 100.0));   // saturação de u
+}
  
   pidSetpoint = yr;
   pidInput    = y;

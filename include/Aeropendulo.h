@@ -23,3 +23,6 @@ void armazenaGanhos();
 void acionamentoSerial();
 void verificaEmergencia();
 void modoEmergencia();
+float proporcional(float erro);
+float integrativo(float erro);
+float derivativo();
