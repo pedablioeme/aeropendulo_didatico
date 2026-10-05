@@ -7,9 +7,9 @@ Projeto Integrador III
 AEROPÊNDULO PARA ENSINO DE CONTROLE DE PROCESSOS
 
 Autores:
+ - Ícaro da Silva Melo
  - Ana Laura de Souza Teixeira
  - Bryan da Conceição Teixeira
- - Ícaro da Silva Melo
 
 Orientador: Prof. Werther Serralheiro
 ===============================================
@@ -19,20 +19,20 @@ Orientador: Prof. Werther Serralheiro
 #include <Servo.h>
 #include <TimerOne.h>
 #include <Wire.h>
-#include <PID_v1.h>     // PID do Brett Beauregard (Library Manager: "PID")
+#include <PID_v1.h>  
 #include <EEPROM.h>
 
 #include "Globals.h"
 #include "Aeropendulo.h"
 #include "Menu.h"
 
-// ---------- Definição do objeto do LCD (declarado extern em Globals.h) ----------
+// ---------- Definição do objeto do LCD  ----------
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // ---------- Objetos exclusivos deste arquivo ----------
 Servo Esc;
 
-// ---------- Definição das variáveis do menu e do encoder (declaradas extern em Globals.h) ----------
+// ---------- Definição das variáveis do menu e do encoder ----------
 byte L_botao = 1;
 byte LA_botao = 1;
 byte tela = 1;                 // 1 a 4 = Menu Principal | 10, 20, 30, 40 = Submenus
@@ -44,7 +44,7 @@ volatile long counter = 0;
 bool mFechada = false;         // ed Werther
 volatile bool precisaSalvarEEPROM = false;
 
-// ---------- Definição das variáveis do processo (declaradas extern em Globals.h) ----------
+// ---------- Definição das variáveis do processo ----------
 int   u = 0;       // % servo
 float y = 0.0;      // graus
 float yr = 0.0;
@@ -60,7 +60,7 @@ double pidOutput   = 0.0;   // -> u
 
 PID pid(&pidInput, &pidOutput, &pidSetpoint, Kp, Ki, Kd, DIRECT);
 
-// ---------- Funcionamento (exclusivas deste arquivo) ----------
+// ---------- Funcionamento ----------
 int  leitura_inicial = 0;
 long tempo_atual;
 bool emergencia;
@@ -71,7 +71,7 @@ void (*resetFunc)() = 0;
 void setup() {
   Serial.begin(115200);
 
-  // caracteres customizados (usados só aqui, por isso ficam locais ao setup)
+  // caracteres customizados
   static byte customChar1[] = { B01101, B10010, B01110, B00001, B01111, B10001, B01111, B00000 }; // ç
   static byte customChar2[] = { B00000, B00000, B01110, B10000, B10001, B01110, B00100, B01100 }; // a com til
   static byte customChar3[] = { B11000, B11000, B00000, B00000, B00000, B00000, B00000, B00000 }; // ° (graus)
@@ -175,17 +175,15 @@ void fechaMalhaPID() {
   if (pid.GetMode() == MANUAL) {
     pidOutput = u;
     pidInput  = y;
-    pid.SetMode(AUTOMATIC);               // Initialize() lê pidOutput e pidInput
+    pid.SetMode(AUTOMATIC);              
   }
-
-  // variáveis do código -> variáveis da biblioteca
+ 
   pidSetpoint = yr;
   pidInput    = y;
-  pid.SetTunings(Kp, Ki, Kd);             // acompanha mudanças feitas no menu
+  pid.SetTunings(Kp, Ki, Kd);      
 
   pid.Compute();
 
-  // variáveis da biblioteca -> variáveis do código
   u = (int)round(pidOutput);
 }
 
