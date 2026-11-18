@@ -8,6 +8,7 @@
 #define ymax       80.0
 #define angulo_max 360.00
 #define Ts         50      // período de amostragem da malha, em ms
+#define Ts_s 0.05
 
 // ---------- Endereços na EEPROM (espaçados de 4 em 4 bytes para os floats) ----------
 #define ADDR_KP 0
@@ -23,3 +24,7 @@ void armazenaGanhos();
 void acionamentoSerial();
 void verificaEmergencia();
 void modoEmergencia();
+void executaDegraus();
+float proporcional(float erro);
+float integrativo(float erro);
+float derivativo();

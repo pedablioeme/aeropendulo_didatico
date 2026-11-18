@@ -19,7 +19,6 @@ Orientador: Prof. Werther Serralheiro
 #include <Servo.h>
 #include <TimerOne.h>
 #include <Wire.h>
-#include <PID_v1.h>  
 #include <EEPROM.h>
 
 #include "Globals.h"
@@ -42,23 +41,25 @@ bool limpar_lcd = 0;
 bool editando = false;         // controla se estamos alterando um valor ou navegando
 volatile long counter = 0;
 bool mFechada = false;         // ed Werther
+bool modoDegrau = false;
 volatile bool precisaSalvarEEPROM = false;
 
 // ---------- Definição das variáveis do processo ----------
-int   u = 0;       // % servo
+float u = 0;       // % servo
 float y = 0.0;      // graus
 float yr = 0.0;
 float Kp = 0.0;
 float Ki = 0.0;
 float Kd = 0.0;
 
-// ---------- Variáveis exclusivas da biblioteca PID (a lib exige ponteiros para double) ----------
-// o resto do código continua usando yr, y e u normalmente
-double pidSetpoint = 0.0;   // <- yr
-double pidInput    = 0.0;   // <- y
-double pidOutput   = 0.0;   // -> u
+// variáveis do controlador PID
+float termoI = 0.0;        // parcela integral acumulada
+float y_anterior = 0.0;    // medição anterior (para o termo derivativo)
+bool  malhaAtiva = false;  // indica se a malha fechada já foi inicializada
 
-PID pid(&pidInput, &pidOutput, &pidSetpoint, Kp, Ki, Kd, DIRECT);
+// Variáveis para a rotina de Degrau Automático
+unsigned long tempoDegrau = 0;
+const unsigned long INTERVALO_DEGRAU = 5000; // 20 segundos por degrau
 
 // ---------- Funcionamento ----------
 int  leitura_inicial = 0;
@@ -97,11 +98,6 @@ void setup() {
   Timer1.initialize(1000);             // interrupção a cada 1 milissegundo
   Timer1.attachInterrupt(Timer);       // Timer() está definida em Menu.cpp
 
-  // configuração do PID
-  pid.SetSampleTime(Ts);               // mesmo Ts da malha (ms)
-  pid.SetOutputLimits(0, 100);         // u em % (o padrão da lib seria 0-255)
-  pid.SetMode(MANUAL);                 // só entra em AUTOMATIC quando mFechada = true
-
   // frase de abertura
   lcd.setCursor(0, 1); lcd.print("Aeropendulo Didatico");
   lcd.setCursor(0, 2); lcd.print("   ELETROMECANICA   ");
@@ -119,7 +115,7 @@ void setup() {
   }
 
   leitura_inicial = analogRead(pin_pot);
-  Esc.attach(pin_esc);
+  Esc.attach(pin_esc, 1000, 2000); // pino, sinal mínimo e máximo do ESC
   tempo_atual = millis();
 }
 
@@ -128,12 +124,17 @@ void loop() {
     menu();                                // Menu.cpp
     if ((millis() - tempo_atual) >= Ts) {
       leituraAngulo();
+      executaDegraus();
       if (mFechada) {
-        fechaMalhaPID();
+      fechaMalhaPID();
+      } else {
+        malhaAtiva = false;   // malha aberta: força reinicialização ao fechar de novo
       }
+      /*
       else if (pid.GetMode() == AUTOMATIC) {
         pid.SetMode(MANUAL);              // malha aberta: PID fica parado, u é manual
       }
+        */
       acionaSaida();
       imprime();
       tempo_atual = millis();
@@ -157,34 +158,80 @@ void leituraAngulo() {
 }
 
 void acionaSaida() {
-  sinal_esc = map(u, 0, 100, 0, 179);
-  Esc.write(sinal_esc);
+  sinal_esc = map(u, 0, 100, 1000, 2000); // mapeia u para o sinal do ESC (1000 a 2000 microssegundos)
+  Esc.writeMicroseconds(sinal_esc);
 }
 
 void imprime() {
-  Serial.print("u:");
+  /*
+  Serial.print("Malha Fechada: ");
+  Serial.print(mFechada ? "Sim" : "Nao");
+  Serial.print(" | Malha Aberta: ");
+  Serial.print(mFechada ? "Nao" : "Sim");
+  Serial.print(" | u:");
   Serial.print(u);
   Serial.print(" | yr:");
   Serial.print(yr);
   Serial.print(" | y:");
   Serial.println(y);
+  */
+  Serial.print(u);
+  Serial.print(" ");
+  Serial.print(yr);
+  Serial.print(" ");
+  Serial.println(y);
 }
 
-void fechaMalhaPID() {
-  // transferência sem tranco: ao ligar a malha, a lib parte do u atual
-  if (pid.GetMode() == MANUAL) {
-    pidOutput = u;
-    pidInput  = y;
-    pid.SetMode(AUTOMATIC);              
+float proporcional(float erro){
+  return Kp * erro;
+}
+
+float integrativo(float erro){  // deve-se aplicar um trava para a integração do controlador
+  termoI += Ki * Ts_s * erro;
+  termoI = constrain(termoI, 0.0, 100.0);   // anti-windup: limita a parcela I à faixa de u
+  return termoI;
+}
+
+float derivativo(){
+  // derivada da medição (não do erro): evita pico quando yr muda
+  float d = -Kd * (y - y_anterior) / Ts_s;
+  y_anterior = y;
+  return d;
+}
+
+void fechaMalhaPID(){
+  float erro = yr - y;
+
+  // primeiro ciclo após fechar a malha: parte do u atual (sem tranco)
+  if (!malhaAtiva) {
+    termoI = u;
+    y_anterior = y;
+    malhaAtiva = true;
   }
- 
-  pidSetpoint = yr;
-  pidInput    = y;
-  pid.SetTunings(Kp, Ki, Kd);      
 
-  pid.Compute();
+  float P = proporcional(erro);
+  float I = integrativo(erro);
+  float D = derivativo();
 
-  u = (int)round(pidOutput);
+  float saida = P + I + D;
+  u = (constrain(saida, 0.0, 100.0));   // saturação de u
+}
+
+void executaDegraus() {
+  if (modoDegrau) {
+    if (millis() - tempoDegrau >= INTERVALO_DEGRAU) {
+      tempoDegrau = millis(); // reinicia a contagem para o próximo degrau
+      
+      if (yr >= 75.0) {
+        yr = 0.0;
+        u = 0.0;
+        modoDegrau = false; // Atingiu 75, finaliza a sequência e mantém em 75
+        mFechada = false;   // Retorna para malha aberta após completar a sequência
+      } else {
+      yr += 15.0;  
+      }
+    }
+  }
 }
 
 void armazenaGanhos() {
@@ -194,15 +241,47 @@ void armazenaGanhos() {
 }
 
 void acionamentoSerial() {
-  if (Serial.available() > 0) {
-    u = constrain(Serial.parseInt(), 0, 100);
+  while (Serial.available() > 0) {
+    char c = Serial.peek(); // Apenas espia o primeiro caractere
+    
+    if (c == 'A' || c == 'a') {
+      Serial.read(); 
+      mFechada = false;
+      modoDegrau = false; // Cancela a sequência de degraus
+    } 
+    else if (c == 'F' || c == 'f') {
+      Serial.read(); 
+      mFechada = true;
+      modoDegrau = false; // Cancela a sequência de degraus
+    } 
+    else if (c == 'D' || c == 'd') {
+      Serial.read(); 
+      mFechada = true;
+      modoDegrau = true;
+      yr = 0.0;                 // Inicia em 0 graus
+      tempoDegrau = millis();   // Inicia o timer do degrau
+    }
+    else if (isDigit(c) || c == '-') { 
+      int leitura = Serial.parseInt(); 
+      
+      modoDegrau = false; // Envio manual cancela o automático
+      
+      if (mFechada) {
+        yr = constrain(leitura, 0, 180);
+      } else {
+        u = constrain(leitura, 0, 100);
+      }
+    } 
+    else {
+      Serial.read(); // Consome lixo de buffer
+    }
   }
 }
 
 void verificaEmergencia() {
   if (y > ymax) {
     emergencia = true;
-    Esc.write(0);
+    Esc.writeMicroseconds(1000); // Envia sinal mínimo para o ESC
     u = 0;
     Timer1.detachInterrupt();
     lcd.clear();

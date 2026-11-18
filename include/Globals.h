@@ -21,15 +21,20 @@ extern int  referencia;
 extern int  rotacao;
 extern bool limpar_lcd;
 extern bool editando;             // controla se estamos alterando um valor ou navegando
+extern bool malhaAtiva;
 extern volatile long counter;
 extern bool mFechada;             // ed Werther
+extern bool modoDegrau;           // ed Werther
+extern const unsigned long INTERVALO_DEGRAU; // 10 segundos por degrau
 extern volatile bool precisaSalvarEEPROM;
 
 // ---------- Variáveis do processo ----------
 // Escritas pela malha de controle (main.cpp) e lidas/editadas pelo menu (Menu.cpp)
-extern int   u;      // % servo
+extern float u;      // % servo
 extern float y;      // graus
+extern float y_anterior;
 extern float yr;
 extern float Kp;
 extern float Ki;
 extern float Kd;
+extern float termoI;
