@@ -59,7 +59,7 @@ bool  malhaAtiva = false;  // indica se a malha fechada já foi inicializada
 
 // Variáveis para a rotina de Degrau Automático
 unsigned long tempoDegrau = 0;
-const unsigned long INTERVALO_DEGRAU = 5000; // 20 segundos por degrau
+const unsigned long INTERVALO_DEGRAU = 20000; // 20 segundos por degrau
 
 // ---------- Funcionamento ----------
 int  leitura_inicial = 0;
